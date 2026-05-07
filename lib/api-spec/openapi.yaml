@@ -3,13 +3,25 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AdeGest - Wine Cellar Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: categories
+    description: Product category management
+  - name: suppliers
+    description: Supplier management
+  - name: products
+    description: Product management
+  - name: sales
+    description: Sales registration and management
+  - name: stock
+    description: Inventory and stock movement management
+  - name: reports
+    description: Sales and inventory analytics reports
 paths:
   /healthz:
     get:
@@ -24,6 +36,479 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # Categories
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List all categories
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: createCategory
+      tags: [categories]
+      summary: Create a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryBody"
+      responses:
+        "201":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+  /categories/{id}:
+    get:
+      operationId: getCategory
+      tags: [categories]
+      summary: Get a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Category found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateCategory
+      tags: [categories]
+      summary: Update a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategoryBody"
+      responses:
+        "200":
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+    delete:
+      operationId: deleteCategory
+      tags: [categories]
+      summary: Delete a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Suppliers
+  /suppliers:
+    get:
+      operationId: listSuppliers
+      tags: [suppliers]
+      summary: List all suppliers
+      responses:
+        "200":
+          description: List of suppliers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Supplier"
+    post:
+      operationId: createSupplier
+      tags: [suppliers]
+      summary: Create a supplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSupplierBody"
+      responses:
+        "201":
+          description: Supplier created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+  /suppliers/{id}:
+    get:
+      operationId: getSupplier
+      tags: [suppliers]
+      summary: Get a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Supplier found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateSupplier
+      tags: [suppliers]
+      summary: Update a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSupplierBody"
+      responses:
+        "200":
+          description: Supplier updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+    delete:
+      operationId: deleteSupplier
+      tags: [suppliers]
+      summary: Delete a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Products
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List all products
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: stockStatus
+          in: query
+          schema:
+            type: ["string", "null"]
+            enum: ["normal", "low", "critical", null]
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductBody"
+      responses:
+        "200":
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+  /products/low-stock:
+    get:
+      operationId: listLowStockProducts
+      tags: [products]
+      summary: List products at or below minimum stock
+      responses:
+        "200":
+          description: Low stock products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  # Sales
+  /sales:
+    get:
+      operationId: listSales
+      tags: [sales]
+      summary: List sales
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: endDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+            enum: ["confirmed", "cancelled", null]
+      responses:
+        "200":
+          description: List of sales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sale"
+    post:
+      operationId: createSale
+      tags: [sales]
+      summary: Register a new sale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSaleBody"
+      responses:
+        "201":
+          description: Sale created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+        "400":
+          description: Insufficient stock or invalid data
+  /sales/{id}:
+    get:
+      operationId: getSale
+      tags: [sales]
+      summary: Get a sale with its items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sale found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaleWithItems"
+        "404":
+          description: Not found
+  /sales/{id}/cancel:
+    post:
+      operationId: cancelSale
+      tags: [sales]
+      summary: Cancel a sale and restore stock
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sale cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+        "404":
+          description: Not found
+
+  # Stock movements
+  /stock/movements:
+    get:
+      operationId: listStockMovements
+      tags: [stock]
+      summary: List stock movements
+      parameters:
+        - name: productId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of stock movements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockMovement"
+    post:
+      operationId: createStockMovement
+      tags: [stock]
+      summary: Register a stock entry (merchandise received)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStockMovementBody"
+      responses:
+        "201":
+          description: Stock movement created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockMovement"
+
+  # Reports
+  /reports/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [reports]
+      summary: Get dashboard summary statistics
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+  /reports/daily:
+    get:
+      operationId: getDailyReport
+      tags: [reports]
+      summary: Get daily sales report
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: ["string", "null"]
+            description: ISO date string (defaults to today)
+      responses:
+        "200":
+          description: Daily report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyReport"
+  /reports/weekly:
+    get:
+      operationId: getWeeklyReport
+      tags: [reports]
+      summary: Get weekly sales report
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: ["string", "null"]
+            description: Start date of the week (defaults to current week Monday)
+      responses:
+        "200":
+          description: Weekly report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyReport"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +519,517 @@ components:
       required:
         - status
 
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - createdAt
+    CreateCategoryBody:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+    UpdateCategoryBody:
+      type: object
+      properties:
+        name:
+          type: string
+
+    Supplier:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        contact:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - createdAt
+    CreateSupplierBody:
+      type: object
+      properties:
+        name:
+          type: string
+        contact:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+      required:
+        - name
+    UpdateSupplierBody:
+      type: object
+      properties:
+        name:
+          type: string
+        contact:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        sku:
+          type: ["string", "null"]
+        categoryId:
+          type: ["integer", "null"]
+        categoryName:
+          type: ["string", "null"]
+        supplierId:
+          type: ["integer", "null"]
+        supplierName:
+          type: ["string", "null"]
+        costPrice:
+          type: number
+        salePrice:
+          type: number
+        stockQuantity:
+          type: integer
+        minStock:
+          type: integer
+        unit:
+          type: string
+          enum: [un, cx6, cx12, garrafa]
+        stockStatus:
+          type: string
+          enum: [normal, low, critical]
+        imageUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - costPrice
+        - salePrice
+        - stockQuantity
+        - minStock
+        - unit
+        - stockStatus
+        - createdAt
+        - updatedAt
+    CreateProductBody:
+      type: object
+      properties:
+        name:
+          type: string
+        sku:
+          type: ["string", "null"]
+        categoryId:
+          type: ["integer", "null"]
+        supplierId:
+          type: ["integer", "null"]
+        costPrice:
+          type: number
+        salePrice:
+          type: number
+        stockQuantity:
+          type: integer
+        minStock:
+          type: integer
+        unit:
+          type: string
+          enum: [un, cx6, cx12, garrafa]
+        imageUrl:
+          type: ["string", "null"]
+      required:
+        - name
+        - costPrice
+        - salePrice
+        - stockQuantity
+        - minStock
+        - unit
+    UpdateProductBody:
+      type: object
+      properties:
+        name:
+          type: string
+        sku:
+          type: ["string", "null"]
+        categoryId:
+          type: ["integer", "null"]
+        supplierId:
+          type: ["integer", "null"]
+        costPrice:
+          type: number
+        salePrice:
+          type: number
+        stockQuantity:
+          type: integer
+        minStock:
+          type: integer
+        unit:
+          type: string
+          enum: [un, cx6, cx12, garrafa]
+        imageUrl:
+          type: ["string", "null"]
+
+    SaleItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        saleId:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+        discount:
+          type: number
+        subtotal:
+          type: number
+      required:
+        - id
+        - saleId
+        - productId
+        - productName
+        - quantity
+        - unitPrice
+        - discount
+        - subtotal
+    CreateSaleItemBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+        discount:
+          type: number
+      required:
+        - productId
+        - quantity
+    Sale:
+      type: object
+      properties:
+        id:
+          type: integer
+        total:
+          type: number
+        discount:
+          type: number
+        paymentMethod:
+          type: string
+          enum: [dinheiro, cartao, pix]
+        status:
+          type: string
+          enum: [confirmed, cancelled]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - total
+        - discount
+        - paymentMethod
+        - status
+        - createdAt
+        - updatedAt
+    SaleWithItems:
+      type: object
+      properties:
+        id:
+          type: integer
+        total:
+          type: number
+        discount:
+          type: number
+        paymentMethod:
+          type: string
+          enum: [dinheiro, cartao, pix]
+        status:
+          type: string
+          enum: [confirmed, cancelled]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleItem"
+      required:
+        - id
+        - total
+        - discount
+        - paymentMethod
+        - status
+        - createdAt
+        - updatedAt
+        - items
+    CreateSaleBody:
+      type: object
+      properties:
+        paymentMethod:
+          type: string
+          enum: [dinheiro, cartao, pix]
+        discount:
+          type: number
+        notes:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateSaleItemBody"
+      required:
+        - paymentMethod
+        - items
+
+    StockMovement:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        type:
+          type: string
+          enum: [entry, exit, adjustment]
+        quantity:
+          type: integer
+        invoiceNumber:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - productId
+        - productName
+        - type
+        - quantity
+        - createdAt
+    CreateStockMovementBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        type:
+          type: string
+          enum: [entry, adjustment]
+        quantity:
+          type: integer
+        invoiceNumber:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - productId
+        - type
+        - quantity
+
+    DashboardStats:
+      type: object
+      properties:
+        totalSkus:
+          type: integer
+        lowStockCount:
+          type: integer
+        criticalStockCount:
+          type: integer
+        totalStockValue:
+          type: number
+        todayRevenue:
+          type: number
+        todaySalesCount:
+          type: integer
+        todayAverageTicket:
+          type: number
+        weekRevenue:
+          type: number
+      required:
+        - totalSkus
+        - lowStockCount
+        - criticalStockCount
+        - totalStockValue
+        - todayRevenue
+        - todaySalesCount
+        - todayAverageTicket
+        - weekRevenue
+
+    HourlySales:
+      type: object
+      properties:
+        hour:
+          type: integer
+        revenue:
+          type: number
+        count:
+          type: integer
+      required:
+        - hour
+        - revenue
+        - count
+    CategorySales:
+      type: object
+      properties:
+        categoryName:
+          type: string
+        revenue:
+          type: number
+        count:
+          type: integer
+      required:
+        - categoryName
+        - revenue
+        - count
+    TopProduct:
+      type: object
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantitySold:
+          type: integer
+        revenue:
+          type: number
+      required:
+        - productId
+        - productName
+        - quantitySold
+        - revenue
+    DailyReport:
+      type: object
+      properties:
+        date:
+          type: string
+        totalRevenue:
+          type: number
+        salesCount:
+          type: integer
+        averageTicket:
+          type: number
+        revenueVsYesterday:
+          type: number
+        countVsYesterday:
+          type: number
+        topProducts:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopProduct"
+        hourlySales:
+          type: array
+          items:
+            $ref: "#/components/schemas/HourlySales"
+        categorySales:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategorySales"
+      required:
+        - date
+        - totalRevenue
+        - salesCount
+        - averageTicket
+        - revenueVsYesterday
+        - countVsYesterday
+        - topProducts
+        - hourlySales
+        - categorySales
+
+    DailySales:
+      type: object
+      properties:
+        date:
+          type: string
+        revenue:
+          type: number
+        count:
+          type: integer
+      required:
+        - date
+        - revenue
+        - count
+    WeeklyReport:
+      type: object
+      properties:
+        startDate:
+          type: string
+        endDate:
+          type: string
+        totalRevenue:
+          type: number
+        salesCount:
+          type: integer
+        averageTicket:
+          type: number
+        grossMargin:
+          type: number
+        revenueVsPrevWeek:
+          type: number
+        countVsPrevWeek:
+          type: number
+        ticketVsPrevWeek:
+          type: number
+        dailySales:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailySales"
+        topProducts:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopProduct"
+        categorySales:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategorySales"
+        noMovementProducts:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopProduct"
+      required:
+        - startDate
+        - endDate
+        - totalRevenue
+        - salesCount
+        - averageTicket
+        - grossMargin
+        - revenueVsPrevWeek
+        - countVsPrevWeek
+        - ticketVsPrevWeek
+        - dailySales
+        - topProducts
+        - categorySales
+        - noMovementProducts

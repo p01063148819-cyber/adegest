@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "AdeGest"
+version = "1.0.0"
+id = "artifacts/adegest"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24957
+
+[services.development]
+run = "pnpm --filter @workspace/adegest run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/adegest", "run", "build" ]
+publicDir = "artifacts/adegest/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24957"
+BASE_PATH = "/"
