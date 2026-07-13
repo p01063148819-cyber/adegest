@@ -17,14 +17,10 @@ localPort = 24957
 [services.development]
 run = "pnpm --filter @workspace/adegest run dev"
 
-[services.production]
-build = [ "pnpm", "--filter", "@workspace/adegest", "run", "build" ]
-publicDir = "artifacts/adegest/dist/public"
-serve = "static"
-
-[[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
+# No [services.production] block: this artifact is no longer deployed on its
+# own. In production the API server (artifacts/api-server) builds and serves
+# these static files directly (see artifacts/api-server/src/app.ts). The app
+# is deployed to Railway, not Replit Deployments.
 
 [services.env]
 PORT = "24957"

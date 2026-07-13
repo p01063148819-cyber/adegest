@@ -1,17 +1,18 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ShoppingCart, Package, Tags, Users, BarChart3, Menu, Wine } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Package, Tags, BarChart3, Menu, Wine, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useState } from "react";
+import { useAuth } from "@/lib/auth-context";
+import type { Role } from "@workspace/api-client-react";
 
-const navigation = [
-  { name: "Início", href: "/", icon: LayoutDashboard },
-  { name: "Vendas", href: "/vendas", icon: ShoppingCart },
-  { name: "Estoque", href: "/estoque", icon: Package },
-  { name: "Produtos", href: "/produtos", icon: Wine },
-  { name: "Categorias", href: "/categorias", icon: Tags },
-  { name: "Fornecedores", href: "/fornecedores", icon: Users },
-  { name: "Relatórios", href: "/relatorios", icon: BarChart3 },
+const navigation: { name: string; href: string; icon: typeof LayoutDashboard; roles: Role[] }[] = [
+  { name: "Início", href: "/", icon: LayoutDashboard, roles: ["admin", "vendedor"] },
+  { name: "Vendas", href: "/vendas", icon: ShoppingCart, roles: ["admin", "vendedor"] },
+  { name: "Estoque", href: "/estoque", icon: Package, roles: ["admin"] },
+  { name: "Produtos", href: "/produtos", icon: Wine, roles: ["admin"] },
+  { name: "Categorias", href: "/categorias", icon: Tags, roles: ["admin"] },
+  { name: "Relatórios", href: "/relatorios", icon: BarChart3, roles: ["admin"] },
 ];
 
 function SidebarLogo() {
@@ -37,10 +38,13 @@ function SidebarLogo() {
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { role, logout } = useAuth();
+
+  const visibleNavigation = navigation.filter((item) => !role || item.roles.includes(role));
 
   const NavLinks = () => (
     <nav className="flex flex-col gap-1 w-full p-2">
-      {navigation.map((item) => {
+      {visibleNavigation.map((item) => {
         const isActive = location === item.href || (location.startsWith(item.href) && item.href !== "/");
         const Icon = item.icon;
 
@@ -70,6 +74,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 overflow-y-auto py-4">
           <NavLinks />
         </div>
+        <div className="p-2 border-t border-sidebar-border">
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-xs text-sidebar-foreground/50 uppercase tracking-widest">{role}</span>
+            <Button variant="ghost" size="icon" onClick={logout} className="text-sidebar-foreground/60 hover:bg-sidebar-accent">
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Mobile Header & Sidebar */}
@@ -95,6 +107,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <SidebarLogo />
             <div className="py-4">
               <NavLinks />
+            </div>
+            <div className="p-2 border-t border-sidebar-border">
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="text-xs text-sidebar-foreground/50 uppercase tracking-widest">{role}</span>
+                <Button variant="ghost" size="icon" onClick={logout} className="text-sidebar-foreground/60 hover:bg-sidebar-accent">
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </SheetContent>
         </Sheet>

@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gte, lte, sql, ne } from "drizzle-orm";
-import { db, salesTable, saleItemsTable, productsTable, categoriesTable } from "@workspace/db";
-import { GetDailyReportQueryParams, GetWeeklyReportQueryParams } from "@workspace/api-zod";
+import { db, salesTable, saleItemsTable, productsTable, categoriesTable, stockMovementsTable } from "@workspace/db";
+import { GetDailyReportQueryParams, GetWeeklyReportQueryParams, GetDashboardStatsQueryParams } from "@workspace/api-zod";
+import { buildComboAvailabilityContext } from "../lib/comboStock";
 
 const router: IRouter = Router();
 
@@ -88,23 +89,57 @@ async function getCategorySales(start: Date, end: Date) {
   }));
 }
 
-router.get("/reports/dashboard", async (_req, res): Promise<void> => {
+router.get("/reports/dashboard", async (req, res): Promise<void> => {
+  const query = GetDashboardStatsQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ error: query.error.message });
+    return;
+  }
+  const periodDays = query.data.days === 30 ? 30 : 7;
+
   const now = new Date();
   const todayStart = startOfDay(now);
   const todayEnd = endOfDay(now);
   const weekStart = startOfWeek(now);
+  const yesterdayStart = startOfDay(addDays(now, -1));
+  const yesterdayEnd = endOfDay(addDays(now, -1));
+  const periodStart = startOfDay(addDays(now, -(periodDays - 1)));
 
   const [totalSkusRow] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(productsTable);
   const [lowStockRow] = await db
     .select({ count: sql<number>`cast(count(*) as int)` })
     .from(productsTable)
-    .where(and(lte(productsTable.stockQuantity, productsTable.minStock), sql`${productsTable.stockQuantity} > 0`));
+    .where(
+      and(
+        eq(productsTable.isCombo, false),
+        lte(productsTable.stockQuantity, productsTable.minStock),
+        sql`${productsTable.stockQuantity} > 0`,
+      ),
+    );
   const [criticalRow] = await db
     .select({ count: sql<number>`cast(count(*) as int)` })
     .from(productsTable)
     .where(
-      sql`${productsTable.stockQuantity} = 0 OR ${productsTable.stockQuantity} <= ${productsTable.minStock} * 0.5`,
+      and(
+        eq(productsTable.isCombo, false),
+        sql`${productsTable.stockQuantity} = 0 OR ${productsTable.stockQuantity} <= ${productsTable.minStock} * 0.5`,
+      ),
     );
+
+  // Combos never carry their own stockQuantity (always 0 in the DB), so the SQL
+  // filters above can't see them — classify their computed availability here instead.
+  const comboProducts = await db
+    .select({ id: productsTable.id, isCombo: productsTable.isCombo, minStock: productsTable.minStock })
+    .from(productsTable)
+    .where(eq(productsTable.isCombo, true));
+  const comboAvailability = await buildComboAvailabilityContext(comboProducts);
+  let comboLowStockCount = 0;
+  let comboCriticalStockCount = 0;
+  for (const combo of comboProducts) {
+    const availability = comboAvailability.get(combo.id)?.availability ?? 0;
+    if (availability === 0 || availability <= combo.minStock * 0.5) comboCriticalStockCount++;
+    else if (availability <= combo.minStock) comboLowStockCount++;
+  }
 
   const [stockValueRow] = await db
     .select({ value: sql<number>`sum(cast(${productsTable.salePrice} as numeric) * ${productsTable.stockQuantity})` })
@@ -118,15 +153,102 @@ router.get("/reports/dashboard", async (_req, res): Promise<void> => {
   const weekSales = await getSalesInRange(weekStart, todayEnd);
   const weekRevenue = weekSales.reduce((acc, s) => acc + Number(s.total), 0);
 
+  const yesterdaySales = await getSalesInRange(yesterdayStart, yesterdayEnd);
+  const yesterdayRevenue = yesterdaySales.reduce((acc, s) => acc + Number(s.total), 0);
+  const yesterdaySalesCount = yesterdaySales.length;
+  const yesterdayAverageTicket = yesterdaySalesCount > 0 ? yesterdayRevenue / yesterdaySalesCount : 0;
+  const todayRevenueVsYesterday = yesterdayRevenue > 0 ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100 : 0;
+  const todayAverageTicketVsYesterday =
+    yesterdayAverageTicket > 0 ? ((todayAverageTicket - yesterdayAverageTicket) / yesterdayAverageTicket) * 100 : 0;
+
+  const cancelledToday = await db
+    .select()
+    .from(salesTable)
+    .where(and(eq(salesTable.status, "cancelled"), gte(salesTable.updatedAt, todayStart), lte(salesTable.updatedAt, todayEnd)));
+  const todayCancelledCount = cancelledToday.length;
+  const todayCancelledValue = cancelledToday.reduce((acc, s) => acc + Number(s.total), 0);
+
+  const profitItems = await db
+    .select({
+      quantity: saleItemsTable.quantity,
+      subtotal: saleItemsTable.subtotal,
+      costPrice: productsTable.costPrice,
+    })
+    .from(saleItemsTable)
+    .innerJoin(salesTable, and(eq(saleItemsTable.saleId, salesTable.id), eq(salesTable.status, "confirmed")))
+    .leftJoin(productsTable, eq(saleItemsTable.productId, productsTable.id))
+    .where(and(gte(salesTable.createdAt, todayStart), lte(salesTable.createdAt, todayEnd)));
+  const todayEstimatedProfit = profitItems.reduce(
+    (acc, item) => acc + (Number(item.subtotal) - Number(item.costPrice ?? 0) * item.quantity),
+    0,
+  );
+
+  const salesByDayRows = await db
+    .select({
+      date: sql<string>`to_char(${salesTable.createdAt}, 'YYYY-MM-DD')`,
+      revenue: sql<number>`sum(cast(${salesTable.total} as numeric))`,
+      count: sql<number>`cast(count(*) as int)`,
+    })
+    .from(salesTable)
+    .where(and(eq(salesTable.status, "confirmed"), gte(salesTable.createdAt, periodStart), lte(salesTable.createdAt, todayEnd)))
+    .groupBy(sql`to_char(${salesTable.createdAt}, 'YYYY-MM-DD')`);
+  const salesByDayMap = new Map(salesByDayRows.map((r) => [r.date, { revenue: Number(r.revenue), count: Number(r.count) }]));
+  const salesByDay = Array.from({ length: periodDays }, (_, i) => {
+    const d = addDays(periodStart, i);
+    const key = d.toISOString().split("T")[0];
+    const entry = salesByDayMap.get(key);
+    return { date: key, revenue: entry?.revenue ?? 0, count: entry?.count ?? 0 };
+  });
+
+  const paymentBreakdownRows = await db
+    .select({
+      method: salesTable.paymentMethod,
+      total: sql<number>`sum(cast(${salesTable.total} as numeric))`,
+      count: sql<number>`cast(count(*) as int)`,
+    })
+    .from(salesTable)
+    .where(and(eq(salesTable.status, "confirmed"), gte(salesTable.createdAt, periodStart), lte(salesTable.createdAt, todayEnd)))
+    .groupBy(salesTable.paymentMethod);
+  const paymentBreakdown = paymentBreakdownRows.map((r) => ({
+    method: r.method,
+    total: Number(r.total),
+    count: Number(r.count),
+  }));
+
+  const recentMovements = await db
+    .select({
+      id: stockMovementsTable.id,
+      productId: stockMovementsTable.productId,
+      productName: productsTable.name,
+      type: stockMovementsTable.type,
+      quantity: stockMovementsTable.quantity,
+      invoiceNumber: stockMovementsTable.invoiceNumber,
+      notes: stockMovementsTable.notes,
+      createdAt: stockMovementsTable.createdAt,
+    })
+    .from(stockMovementsTable)
+    .leftJoin(productsTable, eq(stockMovementsTable.productId, productsTable.id))
+    .orderBy(sql`${stockMovementsTable.createdAt} DESC`)
+    .limit(10);
+  const recentStockMovements = recentMovements.map((m) => ({ ...m, productName: m.productName ?? "Produto removido" }));
+
   res.json({
     totalSkus: Number(totalSkusRow?.count ?? 0),
-    lowStockCount: Number(lowStockRow?.count ?? 0),
-    criticalStockCount: Number(criticalRow?.count ?? 0),
+    lowStockCount: Number(lowStockRow?.count ?? 0) + comboLowStockCount,
+    criticalStockCount: Number(criticalRow?.count ?? 0) + comboCriticalStockCount,
     totalStockValue: Number(stockValueRow?.value ?? 0),
     todayRevenue,
     todaySalesCount,
     todayAverageTicket,
     weekRevenue,
+    todayRevenueVsYesterday,
+    todayAverageTicketVsYesterday,
+    todayCancelledCount,
+    todayCancelledValue,
+    todayEstimatedProfit,
+    salesByDay,
+    paymentBreakdown,
+    recentStockMovements,
   });
 });
 

@@ -7,7 +7,7 @@ Sistema de gestão de estoque para adegas — controle de produtos, vendas em te
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
 - `pnpm --filter @workspace/adegest run dev` — run the web frontend (port 24957)
 - `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
+- `pnpm run build` — typecheck + build all packages, frontend before API server (API server serves the frontend build in production)
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
@@ -36,6 +36,7 @@ Sistema de gestão de estoque para adegas — controle de produtos, vendas em te
 - `indexFiles: false` in orval.config.ts for the zod output to prevent barrel auto-generation
 - Stock status (normal/low/critical) is computed at query time in the route handlers, not stored in DB
 - Sales cancellation restores stock transactionally
+- API server serves the built frontend directly (`express.static` + SPA fallback in `artifacts/api-server/src/app.ts`) — single deployed service, deployed to Railway rather than Replit Deployments
 
 ## Product
 

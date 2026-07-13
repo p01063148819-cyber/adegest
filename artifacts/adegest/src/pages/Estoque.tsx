@@ -149,9 +149,6 @@ export default function Estoque() {
                     <Button variant="outline" size="sm" onClick={() => handleOpenDialog(prod, "entry")}>
                       <PackagePlus className="w-4 h-4 mr-1" /> Entrada
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(prod, "adjustment")}>
-                      Ajustar
-                    </Button>
                   </TableCell>
                 </TableRow>
               ))

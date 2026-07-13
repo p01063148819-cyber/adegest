@@ -4,6 +4,7 @@ import { useListSales, getListSalesQueryKey, useCancelSale } from "@workspace/ap
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Ban, FileText, CalendarDays, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +45,7 @@ const SHORTCUTS = [
 export default function Vendas() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { role } = useAuth();
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -112,12 +114,14 @@ export default function Vendas() {
           <h1 className="text-3xl font-serif font-bold text-foreground">Histórico de Vendas</h1>
           <p className="text-muted-foreground">Consulte e filtre as vendas realizadas.</p>
         </div>
-        <Link href="/vendas/nova">
-          <Button size="lg" className="shadow-md">
-            <Plus className="w-5 h-5 mr-2" />
-            Nova Venda (PDV)
-          </Button>
-        </Link>
+        {role !== "admin" && (
+          <Link href="/vendas/nova">
+            <Button size="lg" className="shadow-md">
+              <Plus className="w-5 h-5 mr-2" />
+              Nova Venda (PDV)
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div className="bg-card rounded-xl border border-border shadow-sm p-4 space-y-4">

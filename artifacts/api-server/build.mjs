@@ -3,12 +3,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, cp, access } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
+const frontendDistDir = path.resolve(artifactDir, "../adegest/dist/public");
 
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
@@ -118,6 +119,16 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  try {
+    await access(frontendDistDir);
+  } catch {
+    throw new Error(
+      `Frontend build not found at ${frontendDistDir}. Build @workspace/adegest before @workspace/api-server (see the root "build" script).`,
+    );
+  }
+
+  await cp(frontendDistDir, path.join(distDir, "public"), { recursive: true });
 }
 
 buildAll().catch((err) => {

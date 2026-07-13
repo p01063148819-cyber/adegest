@@ -1,16 +1,19 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Redirect, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/Layout";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
+import Login from "@/pages/Login";
+import CriarConta from "@/pages/CriarConta";
 import Dashboard from "@/pages/Dashboard";
 import Vendas from "@/pages/Vendas";
 import NovaVenda from "@/pages/NovaVenda";
 import Estoque from "@/pages/Estoque";
 import Produtos from "@/pages/Produtos";
 import Categorias from "@/pages/Categorias";
-import Fornecedores from "@/pages/Fornecedores";
 import Relatorios from "@/pages/Relatorios";
 import NotFound from "@/pages/not-found";
 
@@ -23,21 +26,81 @@ const queryClient = new QueryClient({
   }
 });
 
+function RoleHome() {
+  const { role } = useAuth();
+  return <Redirect to={role === "admin" ? "/admin" : "/vendedor"} />;
+}
+
+function AuthenticatedApp() {
+  return (
+    <ProtectedRoute>
+      <Layout>
+        <Switch>
+          <Route path="/" component={RoleHome} />
+          <Route path="/admin">
+            {() => (
+              <ProtectedRoute roles={["admin"]}>
+                <Dashboard />
+              </ProtectedRoute>
+            )}
+          </Route>
+          <Route path="/vendedor">
+            {() => (
+              <ProtectedRoute roles={["vendedor"]}>
+                <NovaVenda />
+              </ProtectedRoute>
+            )}
+          </Route>
+          <Route path="/vendas" component={Vendas} />
+          <Route path="/vendas/nova">
+            {() => (
+              <ProtectedRoute roles={["vendedor"]}>
+                <NovaVenda />
+              </ProtectedRoute>
+            )}
+          </Route>
+          <Route path="/estoque">
+            {() => (
+              <ProtectedRoute roles={["admin"]}>
+                <Estoque />
+              </ProtectedRoute>
+            )}
+          </Route>
+          <Route path="/produtos">
+            {() => (
+              <ProtectedRoute roles={["admin"]}>
+                <Produtos />
+              </ProtectedRoute>
+            )}
+          </Route>
+          <Route path="/categorias">
+            {() => (
+              <ProtectedRoute roles={["admin"]}>
+                <Categorias />
+              </ProtectedRoute>
+            )}
+          </Route>
+          <Route path="/relatorios">
+            {() => (
+              <ProtectedRoute roles={["admin"]}>
+                <Relatorios />
+              </ProtectedRoute>
+            )}
+          </Route>
+          <Route component={NotFound} />
+        </Switch>
+      </Layout>
+    </ProtectedRoute>
+  );
+}
+
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/vendas" component={Vendas} />
-        <Route path="/vendas/nova" component={NovaVenda} />
-        <Route path="/estoque" component={Estoque} />
-        <Route path="/produtos" component={Produtos} />
-        <Route path="/categorias" component={Categorias} />
-        <Route path="/fornecedores" component={Fornecedores} />
-        <Route path="/relatorios" component={Relatorios} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      <Route path="/login" component={Login} />
+      <Route path="/criar-conta" component={CriarConta} />
+      <Route component={AuthenticatedApp} />
+    </Switch>
   );
 }
 
@@ -46,7 +109,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
+          <AuthProvider>
+            <Router />
+          </AuthProvider>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

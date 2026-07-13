@@ -3,17 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: AdeGest - Wine Cellar Management API
+  description: FirmaForte - Wine Cellar Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication and session management
   - name: categories
     description: Product category management
-  - name: suppliers
-    description: Supplier management
   - name: products
     description: Product management
   - name: sales
@@ -36,6 +36,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # Auth
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Create the password for a role
+      description: Only succeeds if the role does not have a password set yet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "400":
+          description: Invalid input
+        "409":
+          description: Account already exists for this role
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in with role and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Authenticated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "400":
+          description: Invalid input
+        "401":
+          description: Invalid credentials
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Clear the current session
+      responses:
+        "204":
+          description: Session cleared
+  /auth/me:
+    get:
+      operationId: getSession
+      tags: [auth]
+      summary: Get the currently authenticated session, if any
+      responses:
+        "200":
+          description: Current session, or null role if not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
 
   # Categories
   /categories:
@@ -116,95 +183,6 @@ paths:
       operationId: deleteCategory
       tags: [categories]
       summary: Delete a category
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "204":
-          description: Deleted
-
-  # Suppliers
-  /suppliers:
-    get:
-      operationId: listSuppliers
-      tags: [suppliers]
-      summary: List all suppliers
-      responses:
-        "200":
-          description: List of suppliers
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Supplier"
-    post:
-      operationId: createSupplier
-      tags: [suppliers]
-      summary: Create a supplier
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateSupplierBody"
-      responses:
-        "201":
-          description: Supplier created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Supplier"
-  /suppliers/{id}:
-    get:
-      operationId: getSupplier
-      tags: [suppliers]
-      summary: Get a supplier
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: Supplier found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Supplier"
-        "404":
-          description: Not found
-    patch:
-      operationId: updateSupplier
-      tags: [suppliers]
-      summary: Update a supplier
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateSupplierBody"
-      responses:
-        "200":
-          description: Supplier updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Supplier"
-    delete:
-      operationId: deleteSupplier
-      tags: [suppliers]
-      summary: Delete a supplier
       parameters:
         - name: id
           in: path
@@ -465,6 +443,12 @@ paths:
       operationId: getDashboardStats
       tags: [reports]
       summary: Get dashboard summary statistics
+      parameters:
+        - name: days
+          in: query
+          description: Period for the sales chart and payment breakdown (7 or 30 days, defaults to 7)
+          schema:
+            type: ["integer", "null"]
       responses:
         "200":
           description: Dashboard statistics
@@ -519,6 +503,40 @@ components:
       required:
         - status
 
+    Role:
+      type: string
+      enum: [admin, vendedor]
+
+    RegisterBody:
+      type: object
+      properties:
+        role:
+          $ref: "#/components/schemas/Role"
+        senha:
+          type: string
+          minLength: 6
+      required:
+        - role
+        - senha
+    LoginBody:
+      type: object
+      properties:
+        role:
+          $ref: "#/components/schemas/Role"
+        senha:
+          type: string
+      required:
+        - role
+        - senha
+    AuthSession:
+      type: object
+      properties:
+        role:
+          type: ["string", "null"]
+          enum: [admin, vendedor, null]
+      required:
+        - role
+
     Category:
       type: object
       properties:
@@ -545,49 +563,6 @@ components:
         name:
           type: string
 
-    Supplier:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        contact:
-          type: ["string", "null"]
-        phone:
-          type: ["string", "null"]
-        email:
-          type: ["string", "null"]
-        createdAt:
-          type: string
-      required:
-        - id
-        - name
-        - createdAt
-    CreateSupplierBody:
-      type: object
-      properties:
-        name:
-          type: string
-        contact:
-          type: ["string", "null"]
-        phone:
-          type: ["string", "null"]
-        email:
-          type: ["string", "null"]
-      required:
-        - name
-    UpdateSupplierBody:
-      type: object
-      properties:
-        name:
-          type: string
-        contact:
-          type: ["string", "null"]
-        phone:
-          type: ["string", "null"]
-        email:
-          type: ["string", "null"]
 
     Product:
       type: object
@@ -622,6 +597,16 @@ components:
           enum: [normal, low, critical]
         imageUrl:
           type: ["string", "null"]
+        isCombo:
+          type: boolean
+        fixedComponents:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComboComponent"
+        optionGroups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComboOptionGroup"
         createdAt:
           type: string
         updatedAt:
@@ -635,8 +620,92 @@ components:
         - minStock
         - unit
         - stockStatus
+        - isCombo
         - createdAt
         - updatedAt
+    ComboComponent:
+      type: object
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: integer
+      required:
+        - productId
+        - productName
+        - quantity
+    ComboComponentInput:
+      type: object
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+      required:
+        - productId
+        - quantity
+    ComboOption:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComboComponent"
+      required:
+        - id
+        - name
+        - components
+    ComboOptionInput:
+      type: object
+      properties:
+        name:
+          type: string
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComboComponentInput"
+      required:
+        - name
+        - components
+    ComboOptionGroup:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        required:
+          type: boolean
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComboOption"
+      required:
+        - id
+        - name
+        - required
+        - options
+    ComboOptionGroupInput:
+      type: object
+      properties:
+        name:
+          type: string
+        required:
+          type: boolean
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComboOptionInput"
+      required:
+        - name
+        - required
+        - options
     CreateProductBody:
       type: object
       properties:
@@ -661,6 +730,16 @@ components:
           enum: [un, cx6, cx12, garrafa]
         imageUrl:
           type: ["string", "null"]
+        isCombo:
+          type: boolean
+        fixedComponents:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComboComponentInput"
+        optionGroups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComboOptionGroupInput"
       required:
         - name
         - costPrice
@@ -692,7 +771,33 @@ components:
           enum: [un, cx6, cx12, garrafa]
         imageUrl:
           type: ["string", "null"]
+        isCombo:
+          type: boolean
+        fixedComponents:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComboComponentInput"
+        optionGroups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComboOptionGroupInput"
 
+    SelectedComboOption:
+      type: object
+      properties:
+        groupId:
+          type: integer
+        groupName:
+          type: string
+        optionId:
+          type: integer
+        optionName:
+          type: string
+      required:
+        - groupId
+        - groupName
+        - optionId
+        - optionName
     SaleItem:
       type: object
       properties:
@@ -712,6 +817,10 @@ components:
           type: number
         subtotal:
           type: number
+        selectedOptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SelectedComboOption"
       required:
         - id
         - saleId
@@ -730,6 +839,10 @@ components:
           type: integer
         discount:
           type: number
+        selectedOptionIds:
+          type: array
+          items:
+            type: integer
       required:
         - productId
         - quantity
@@ -825,7 +938,7 @@ components:
           type: string
         type:
           type: string
-          enum: [entry, exit, adjustment]
+          enum: [entry, exit, adjustment, sale, cancellation]
         quantity:
           type: integer
         invoiceNumber:
@@ -879,6 +992,30 @@ components:
           type: number
         weekRevenue:
           type: number
+        todayRevenueVsYesterday:
+          type: number
+          description: Percentage variation vs. the same period yesterday
+        todayAverageTicketVsYesterday:
+          type: number
+          description: Percentage variation vs. the same period yesterday
+        todayCancelledCount:
+          type: integer
+        todayCancelledValue:
+          type: number
+        todayEstimatedProfit:
+          type: number
+        salesByDay:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailySales"
+        paymentBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentBreakdownItem"
+        recentStockMovements:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockMovement"
       required:
         - totalSkus
         - lowStockCount
@@ -888,6 +1025,28 @@ components:
         - todaySalesCount
         - todayAverageTicket
         - weekRevenue
+        - todayRevenueVsYesterday
+        - todayAverageTicketVsYesterday
+        - todayCancelledCount
+        - todayCancelledValue
+        - todayEstimatedProfit
+        - salesByDay
+        - paymentBreakdown
+        - recentStockMovements
+
+    PaymentBreakdownItem:
+      type: object
+      properties:
+        method:
+          type: string
+        total:
+          type: number
+        count:
+          type: integer
+      required:
+        - method
+        - total
+        - count
 
     HourlySales:
       type: object
